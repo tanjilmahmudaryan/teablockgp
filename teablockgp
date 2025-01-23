@@ -1,1 +1,129 @@
+// teablockgp: A lightweight blockchain simulation npm package
+
+// Step 1: Package Metadata (package.json)
+const packageJson = {
+  "name": "teablockgp",
+  "version": "1.0.0",
+  "description": "A lightweight blockchain simulation framework for educational and general-purpose applications.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/teablockgp.git"
+  },
+  "keywords": ["blockchain", "simulation", "framework", "education", "teablockgp"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.1.2",
+    "jsonwebtoken": "^9.0.0",
+    "axios": "^1.5.0",
+    "dotenv": "^16.0.3",
+    "chalk": "^5.2.0",
+    "winston": "^3.8.2",
+    "crypto-js": "^4.1.1",
+    "socket.io": "^4.6.1",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.48.0"
+  }
+};
+
+// Step 2: Main File (index.js)
+const express = require("express");
+const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+const axios = require("axios");
+const dotenv = require("dotenv").config();
+const chalk = require("chalk");
+const winston = require("winston");
+const CryptoJS = require("crypto-js");
+const { Server } = require("socket.io");
+const _ = require("lodash");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Blockchain Simulation Data Structure
+let blockchain = [];
+let peers = [];
+
+// Utility: Create a new block
+function createBlock(data) {
+  const previousBlock = blockchain[blockchain.length - 1] || {};
+  const block = {
+    index: blockchain.length,
+    timestamp: Date.now(),
+    data,
+    previousHash: previousBlock.hash || "0",
+    hash: CryptoJS.SHA256(JSON.stringify(data) + (previousBlock.hash || "0"))
+      .toString()
+  };
+  blockchain.push(block);
+  return block;
+}
+
+// REST API Endpoints
+app.use(express.json());
+
+app.get("/blockchain", (req, res) => {
+  res.json(blockchain);
+});
+
+app.post("/add-block", (req, res) => {
+  const { data } = req.body;
+  if (!data) return res.status(400).send("Data is required.");
+  const block = createBlock(data);
+  res.status(201).json(block);
+});
+
+// Start the server
+const server = app.listen(PORT, () => {
+  console.log(chalk.green(`TeablockGP server running on http://localhost:${PORT}`));
+});
+
+// WebSocket Integration
+const io = new Server(server);
+io.on("connection", (socket) => {
+  console.log(chalk.blue("New peer connected"));
+  peers.push(socket);
+  socket.emit("blockchain", blockchain);
+
+  socket.on("add-block", (data) => {
+    const block = createBlock(data);
+    io.emit("blockchain", blockchain);
+  });
+
+  socket.on("disconnect", () => {
+    console.log(chalk.yellow("Peer disconnected"));
+    peers = peers.filter((peer) => peer !== socket);
+  });
+});
+
+// Logging Setup
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.Console({ format: winston.format.simple() })
+  ]
+});
+
+logger.info("TeablockGP initialized.");
+
+module.exports = app;
+
+// Step 3: Dependents
+// Projects that might use TeablockGP:
+// 1. edu-chain-sim: Education-focused blockchain simulator.
+// 2. block-analytics: Analyze blockchain simulations.
+// 3. secure-ledger: A basic ledger system using TeablockGP.
+// 4. chain-bot: A chatbot that explains blockchain using simulations.
+// 5. dapp-simulator: Simulate DApp development on a blockchain.
 
